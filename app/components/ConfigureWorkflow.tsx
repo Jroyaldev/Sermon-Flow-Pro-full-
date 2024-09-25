@@ -1,101 +1,159 @@
 "use client";
 
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import { ArrowRight, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import WorkflowChart from './WorkflowChart';
+import { Button } from "@/components/ui/button";
+import WorkflowChart from "./WorkflowChart";
 
 interface WorkflowStep {
-  id: string;
+  number: number;
   name: string;
-  dayOfWeek: string;
-  weeksBeforeSermon: number;
+  color: string;
+  day: string;
+  weeks: number;
+  defaultDay: string;
+  defaultWeeks: number;
 }
 
-const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+export interface SermonWorkflowRef {
+  saveWorkflow: () => void;
+}
 
-export default function ConfigureWorkflow() {
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
-  
-  useEffect(() => {
-    // Load saved steps from local storage when component mounts
-    const savedSteps = localStorage.getItem('workflowSteps');
-    if (savedSteps) {
-      setSteps(JSON.parse(savedSteps));
-    } else {
-      // If no saved steps, use default steps
-      const defaultSteps = [
-        { id: '1', name: 'Research', dayOfWeek: 'Monday', weeksBeforeSermon: 3 },
-        { id: '2', name: 'Outline', dayOfWeek: 'Wednesday', weeksBeforeSermon: 2 },
-        { id: '3', name: 'Write Draft', dayOfWeek: 'Monday', weeksBeforeSermon: 1 },
-        { id: '4', name: 'Review', dayOfWeek: 'Thursday', weeksBeforeSermon: 1 },
-        { id: '5', name: 'Practice', dayOfWeek: 'Saturday', weeksBeforeSermon: 0 },
-      ];
-      setSteps(defaultSteps);
+const SermonWorkflow = forwardRef<SermonWorkflowRef, { onClose?: () => void }>((props, ref) => {
+  const defaultSteps: WorkflowStep[] = [
+    { number: 1, name: "Outline", color: "bg-blue-500", defaultDay: "Mon", defaultWeeks: 3, day: "Mon", weeks: 3 },
+    { number: 2, name: "Research", color: "bg-green-500", defaultDay: "Tue", defaultWeeks: 2, day: "Tue", weeks: 2 },
+    { number: 3, name: "Write Draft", color: "bg-yellow-500", defaultDay: "Wed", defaultWeeks: 1, day: "Wed", weeks: 1 },
+    { number: 4, name: "Review", color: "bg-orange-500", defaultDay: "Thu", defaultWeeks: 1, day: "Thu", weeks: 1 },
+    { number: 5, name: "Practice", color: "bg-red-500", defaultDay: "Fri", defaultWeeks: 0, day: "Fri", weeks: 0 },
+  ];
+
+  const [taskSchedule, setTaskSchedule] = useState<WorkflowStep[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedWorkflow = localStorage.getItem('sermonWorkflow');
+      return savedWorkflow ? JSON.parse(savedWorkflow) : defaultSteps;
     }
-  }, []);
+    return defaultSteps;
+  });
 
-  const handleUpdateStep = (stepId: string, field: keyof WorkflowStep, value: string | number) => {
-    setSteps(steps.map(step =>
-      step.id === stepId ? { ...step, [field]: value } : step
-    ));
+  useEffect(() => {
+    localStorage.setItem('sermonWorkflow', JSON.stringify(taskSchedule));
+  }, [taskSchedule]);
+
+  useImperativeHandle(ref, () => ({
+    saveWorkflow: () => {
+      localStorage.setItem('sermonWorkflow', JSON.stringify(taskSchedule));
+      console.log("Saving workflow:", taskSchedule);
+    }
+  }));
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weeksOptions = [
+    { value: 0, label: "Sermon week" },
+    { value: 1, label: "1 week before" },
+    { value: 2, label: "2 weeks before" },
+    { value: 3, label: "3 weeks before" },
+  ];
+
+  const handleDayChange = (index: number, day: string) => {
+    const newSchedule = [...taskSchedule];
+    newSchedule[index].day = day;
+    setTaskSchedule(newSchedule);
   };
 
-  const handleSave = () => {
-    localStorage.setItem('workflowSteps', JSON.stringify(steps));
-    console.log("Workflow Saved"); // Replace toast with console.log
+  const handleWeekChange = (index: number, weeks: number) => {
+    const newSchedule = [...taskSchedule];
+    newSchedule[index].weeks = weeks;
+    setTaskSchedule(newSchedule);
+  };
+
+  // Add this helper function to calculate days before sermon
+  const calculateDaysBefore = (taskDay: string, taskWeeks: number): number => {
+    const daysOrder = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const sermonDay = "Sun"; // Assuming the sermon is always on Sunday
+    
+    const taskDayIndex = daysOrder.indexOf(taskDay);
+    const sermonDayIndex = daysOrder.indexOf(sermonDay);
+    
+    let daysDifference = sermonDayIndex - taskDayIndex;
+    if (daysDifference <= 0) {
+      daysDifference += 7;
+    }
+    
+    return taskWeeks * 7 + daysDifference;
+  };
+
+  const handleSaveAndClose = () => {
+    if (ref && typeof ref !== 'function' && ref.current) {
+      ref.current.saveWorkflow();
+    }
+    if (props.onClose) {
+      props.onClose();
+    }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Configure Workflow</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-4">
-          {steps.map(step => (
-            <li key={step.id} className="flex items-center justify-between space-x-2">
-              <span>{step.name}</span>
-              <div className="flex items-center space-x-2">
-                <Select
-                  value={step.dayOfWeek}
-                  onValueChange={(value: string) => handleUpdateStep(step.id, 'dayOfWeek', value)}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {daysOfWeek.map(day => (
-                      <SelectItem key={day} value={day}>{day}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={step.weeksBeforeSermon.toString()}
-                  onValueChange={(value: string) => handleUpdateStep(step.id, 'weeksBeforeSermon', parseInt(value))}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select weeks" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[0, 1, 2, 3, 4].map(week => (
-                      <SelectItem key={week} value={week.toString()}>
-                        {week === 0 ? 'Sermon week' : `${week} week${week > 1 ? 's' : ''} before`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+    <div className="p-8 bg-white rounded-lg shadow-md mx-auto max-w-4xl">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800">Sermon Workflow</h2>
+        <Button onClick={handleSaveAndClose}>
+          <Save className="w-4 h-4 mr-2" />
+          Save and Close
+        </Button>
+      </div>
+      
+      {/* Task Scheduling */}
+      <div className="space-y-6">
+        {taskSchedule.map((task, index) => (
+          <div key={task.number} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className={`w-10 h-10 rounded-full ${task.color} flex items-center justify-center`}>
+                <span className="text-white font-bold text-sm">{task.number}</span>
               </div>
-            </li>
-          ))}
-        </ul>
-        <WorkflowChart steps={steps} />
-      </CardContent>
-      <CardFooter>
-        <Button onClick={handleSave} className="ml-auto">Save Workflow</Button>
-      </CardFooter>
-    </Card>
+              <span className="text-lg font-medium">{task.name}</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Select value={task.day} onValueChange={(value) => handleDayChange(index, value)}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {daysOfWeek.map((day) => (
+                    <SelectItem key={day} value={day}>
+                      {day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={task.weeks.toString()} onValueChange={(value) => handleWeekChange(index, parseInt(value))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select week" />
+                </SelectTrigger>
+                <SelectContent>
+                  {weeksOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm font-medium text-gray-600 w-40">
+                {calculateDaysBefore(task.day, task.weeks)} days before sermon
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Visual Timeline */}
+      <div className="mt-10">
+        <WorkflowChart steps={taskSchedule} />
+      </div>
+    </div>
   );
-}
+});
+
+SermonWorkflow.displayName = 'SermonWorkflow';
+
+export default SermonWorkflow;

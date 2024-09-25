@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PlusCircle, ChevronRight, Settings, List, LayoutDashboard, Search, PenTool, FileText, Eye, Mic, BarChart2, Clock, Calendar, Activity } from 'lucide-react'
-import SermonWorkflow, { SermonWorkflowRef } from '@/components/ConfigureWorkflow'
+import SermonWorkflow, { SermonWorkflowRef } from '@/app/components/ConfigureWorkflow'
 
 type Task = {
   id: string
@@ -102,8 +102,7 @@ export default function Dashboard() {
       <div className="flex-1 p-10 space-y-6 overflow-y-auto">
         {showConfigureWorkflow ? (
           <>
-            <SermonWorkflow ref={workflowRef} />
-            <Button onClick={handleSaveWorkflow}>Save and Close</Button>
+            <SermonWorkflow ref={workflowRef} onClose={() => setShowConfigureWorkflow(false)} />
           </>
         ) : (
           <>
