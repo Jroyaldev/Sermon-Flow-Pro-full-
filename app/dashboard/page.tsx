@@ -1,21 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PlusCircle, ChevronRight, Settings, List, LayoutDashboard, Search, PenTool, FileText, Eye, Mic, BarChart2, Clock, Calendar, Activity, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
-import dynamic from 'next/dynamic';
-
-const ConfigureWorkflow = dynamic(
-  () => import('@/components/ConfigureWorkflow').then(mod => mod.default),
-  { 
-    ssr: false,
-    loading: () => <p>Loading...</p>
-  }
-);
+import { PlusCircle, ChevronRight, Settings, List, LayoutDashboard, Search, PenTool, FileText, Eye, Mic, BarChart2, Clock, Calendar, Activity } from 'lucide-react'
+import SermonWorkflow, { SermonWorkflowRef } from '@/components/ConfigureWorkflow'
 
 type Task = {
   id: string
@@ -33,6 +25,8 @@ export default function Dashboard() {
   const [newTask, setNewTask] = useState('')
   const [currentDate, setCurrentDate] = useState('')
   const [showConfigureWorkflow, setShowConfigureWorkflow] = useState(false)
+  const [notification, setNotification] = useState('')
+  const workflowRef = useRef<SermonWorkflowRef>(null);
 
   useEffect(() => {
     const date = new Date()
@@ -58,8 +52,15 @@ export default function Dashboard() {
     ))
   }
 
+  const handleSaveWorkflow = useCallback(() => {
+    workflowRef.current?.saveWorkflow();
+    setShowConfigureWorkflow(false);
+    setNotification('Workflow saved successfully!');
+    setTimeout(() => setNotification(''), 3000); // Clear notification after 3 seconds
+  }, []);
+
   return (
-    <div className="flex h-screen bg-gray-100 font-semibold">
+    <div className="flex h-screen bg-white font-semibold">
       {/* Left Sidebar */}
       <div className="w-64 bg-white p-6 shadow-lg">
         <h1 className="text-2xl font-bold mb-6">Sermon Flow Pro</h1>
@@ -100,7 +101,10 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex-1 p-10 space-y-6 overflow-y-auto">
         {showConfigureWorkflow ? (
-          <ConfigureWorkflow />
+          <>
+            <SermonWorkflow ref={workflowRef} />
+            <Button onClick={handleSaveWorkflow}>Save and Close</Button>
+          </>
         ) : (
           <>
             <div className="flex justify-between items-center">
@@ -250,6 +254,13 @@ export default function Dashboard() {
           </ul>
         </div>
       </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
+          {notification}
+        </div>
+      )}
     </div>
   )
 }
