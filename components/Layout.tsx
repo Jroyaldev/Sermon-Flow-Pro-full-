@@ -7,14 +7,23 @@ type LayoutProps = {
   mainClassName?: string // New prop
 }
 
-const Layout: React.FC<LayoutProps> = ({ leftSidebar, rightSidebar, children, mainClassName }) => {
+export default function Layout({ 
+  leftSidebar, 
+  rightSidebar, 
+  children, 
+  mainClassName 
+}: LayoutProps) {
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden md:block w-64">{leftSidebar}</aside>
-      <main className={`flex-grow ${mainClassName || ''}`}>{children}</main>
-      <aside className="hidden md:block w-64">{rightSidebar}</aside>
+    <div className="flex h-screen overflow-hidden">
+      <div className="w-64 h-full relative">
+        {leftSidebar}
+      </div>
+      <main className={`flex-1 overflow-auto ${mainClassName}`}>
+        {children}
+      </main>
+      <div className="w-64 h-full">
+        {rightSidebar}
+      </div>
     </div>
   )
 }
-
-export default Layout

@@ -14,6 +14,8 @@ import Layout from '@/components/Layout'
 import AddSermonForm from '@/app/components/AddSermonForm'
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import { redirect } from "next/navigation";
+import DynamicUserButton from '@/components/DynamicUserButton';
 
 type Task = {
   id: string;
@@ -42,6 +44,7 @@ type RecentActivity = {
 };
 
 export default function Dashboard() {
+
   const [tasks, setTasks] = useState<Task[]>([
     { id: '1', title: 'Research for "Faith in Action"', completed: false, dueDate: new Date() },
     { id: '2', title: 'Outline "The Power of Prayer"', completed: false, dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
@@ -223,8 +226,8 @@ export default function Dashboard() {
   };
 
   const LeftSidebar = (
-    <div className="p-6 pt-20 md:pt-6 w-64"> {/* Increased width */}
-      <nav className="space-y-2">
+    <div className="p-6 pt-20 md:pt-6 w-64 flex flex-col h-full relative"> {/* Added relative */}
+      <nav className="space-y-2 flex-grow"> {/* Added flex-grow */}
         <Button variant="ghost" className="w-full justify-start text-left text-black hover:bg-gray-100" size="lg">
           <LayoutDashboard className="mr-2 h-5 w-5" />
           Dashboard
@@ -261,6 +264,7 @@ export default function Dashboard() {
           <ChevronRight className="ml-auto h-5 w-5" />
         </Button>
       </nav>
+      <DynamicUserButton />
     </div>
   )
 
