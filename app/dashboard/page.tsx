@@ -16,13 +16,10 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { redirect } from "next/navigation";
 import DynamicUserButton from '@/components/DynamicUserButton';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Database } from '@/types/supabase'
 
-type Task = {
-  id: string;
-  title: string;
-  completed: boolean;
-  dueDate: Date;
-}
+type Task = Database['public']['Tables']['tasks']['Row']
 
 interface SermonData {
   title: string;
@@ -44,19 +41,16 @@ type RecentActivity = {
 };
 
 export default function Dashboard() {
-
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', title: 'Research for "Faith in Action"', completed: false, dueDate: new Date() },
-    { id: '2', title: 'Outline "The Power of Prayer"', completed: false, dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
-    { id: '3', title: 'Write draft for "Love Your Neighbor"', completed: false, dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
-  ])
+  const supabase = createClientComponentClient<Database>()
+  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL); // Add this line
+  const [tasks, setTasks] = useState<Task[]>([])
   const [currentDate, setCurrentDate] = useState('')
   const [showConfigureWorkflow, setShowConfigureWorkflow] = useState(false)
   const [notification, setNotification] = useState('')
   const [showAddTaskPopup, setShowAddTaskPopup] = useState(false)
   const workflowRef = useRef<SermonWorkflowRef>(null);
   const router = useRouter();
-  const [bgColor, setBgColor] = useState('bg-white') // New state for background color
+  const [bgColor, setBgColor] = useState('bg-white')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showAddSermonForm, setShowAddSermonForm] = useState(false)
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
@@ -71,103 +65,149 @@ export default function Dashboard() {
   const [taskTimeouts, setTaskTimeouts] = useState<{ [key: string]: NodeJS.Timeout }>({});
 
   useEffect(() => {
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching tasks:', error)
+        setNotification('Error loading tasks. Please try again later.')
+      } else {
+        setTasks(data)
+      }
+    }
+
+    fetchTasks()
+
     const date = new Date()
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
     setCurrentDate(date.toLocaleDateString('en-US', options))
   }, [])
 
-  const handleAddTask = (newTask: Task) => {
-    setTasks([...tasks, newTask])
-    setShowAddTaskPopup(false)
-    setNotification('Task added successfully!')
+  const handleAddTask = async (newTask: Database['public']['Tables']['tasks']['Insert']) => {
+    console.log('Attempting to add task:', newTask);
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([{
+        title: newTask.title,
+        completed: newTask.completed || false,
+        dueDate: newTask.dueDate || undefined,  // Change null to undefined
+      }])
+      .select()
+
+    if (error) {
+      console.error('Error adding task:', error)
+      setNotification(`Error adding task: ${error.message}`)
+    } else if (data) {
+      console.log('Task added successfully:', data[0]);
+      setTasks([...tasks, data[0]])
+      setShowAddTaskPopup(false)
+      setNotification('Task added successfully!')
+    } else {
+      console.error('No data returned after adding task');
+      setNotification('Error adding task: No data returned')
+    }
     setTimeout(() => setNotification(''), 3000)
   }
 
-  const handleToggleTask = (taskId: string) => {
-    setTasks(tasks.map(task => {
-      if (task.id === taskId) {
-        const newCompleted = !task.completed;
-        if (newCompleted) {
-          // Start the timer when task is completed
-          setCompletedTasks(prev => ({ ...prev, [taskId]: 0 }));
-          const interval = setInterval(() => {
-            setCompletedTasks(prev => {
-              const newValue = (prev[taskId] || 0) + 1;
-              if (newValue >= 100) {
-                clearInterval(interval);
-                const timeout = setTimeout(() => moveTaskToRecentActivity(taskId), 0);
-                setTaskTimeouts(prev => ({ ...prev, [taskId]: timeout }));
-                return prev;
-              }
-              return { ...prev, [taskId]: newValue };
-            });
-          }, 50);
-          // Store the interval ID
-          setTaskTimeouts(prev => ({ ...prev, [`${taskId}-interval`]: interval }));
-        } else {
-          // If unchecked, immediately cancel the timer
-          handleUndoTask(taskId);
+  const handleToggleTask = async (taskId: string) => {
+    const taskToUpdate = tasks.find(task => task.id === taskId)
+    if (!taskToUpdate) return
+
+    const newCompleted = !taskToUpdate.completed
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed: newCompleted })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error updating task:', error)
+      setNotification('Error updating task. Please try again.')
+    } else {
+      setTasks(tasks.map(task => {
+        if (task.id === taskId) {
+          if (newCompleted) {
+            setCompletedTasks(prev => ({ ...prev, [taskId]: 0 }));
+            const interval = setInterval(() => {
+              setCompletedTasks(prev => {
+                const newValue = (prev[taskId] || 0) + 1;
+                if (newValue >= 100) {
+                  clearInterval(interval);
+                  const timeout = setTimeout(() => moveTaskToRecentActivity(taskId), 0);
+                  setTaskTimeouts(prev => ({ ...prev, [taskId]: timeout }));
+                  return prev;
+                }
+                return { ...prev, [taskId]: newValue };
+              });
+            }, 50);
+            setTaskTimeouts(prev => ({ ...prev, [`${taskId}-interval`]: interval }));
+          } else {
+            handleUndoTask(taskId);
+          }
+          return { ...task, completed: newCompleted };
         }
-        return { ...task, completed: newCompleted };
-      }
-      return task;
-    }));
+        return task;
+      }));
+    }
   };
 
-  const moveTaskToRecentActivity = (taskId: string) => {
+  const moveTaskToRecentActivity = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
       setRecentActivities(prev => {
-        // Check if the activity already exists
         const activityExists = prev.some(activity => activity.id === task.id);
         
         if (activityExists) {
-          // If it exists, don't add it again
           return prev;
         } else {
-          // Add the new activity to the beginning of the array
           const newActivities = [{
             id: task.id,
             description: `Completed: ${task.title}`,
             timestamp: new Date()
           }, ...prev];
 
-          // Keep only the last 5 activities
           return newActivities.slice(0, 5);
         }
       });
 
-      // Remove the completed task from the tasks list
-      setTasks(prev => prev.filter(t => t.id !== taskId));
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
 
-      // Remove the task from completedTasks
-      setCompletedTasks(prev => {
-        const { [taskId]: _, ...rest } = prev;
-        return rest;
-      });
+      if (error) {
+        console.error('Error deleting task:', error)
+        setNotification('Error deleting task. Please try again.')
+      } else {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setCompletedTasks(prev => {
+          const { [taskId]: _, ...rest } = prev;
+          return rest;
+        });
 
-      // Clear the timeout and interval
-      if (taskTimeouts[taskId]) {
-        clearTimeout(taskTimeouts[taskId]);
+        if (taskTimeouts[taskId]) {
+          clearTimeout(taskTimeouts[taskId]);
+        }
+        if (taskTimeouts[`${taskId}-interval`]) {
+          clearInterval(taskTimeouts[`${taskId}-interval`]);
+        }
+        setTaskTimeouts(prev => {
+          const { [taskId]: _, [`${taskId}-interval`]: __, ...rest } = prev;
+          return rest;
+        });
       }
-      if (taskTimeouts[`${taskId}-interval`]) {
-        clearInterval(taskTimeouts[`${taskId}-interval`]);
-      }
-      setTaskTimeouts(prev => {
-        const { [taskId]: _, [`${taskId}-interval`]: __, ...rest } = prev;
-        return rest;
-      });
     }
   };
 
-  const handleUndoTask = (taskId: string) => {
-    // Clear the completion timer
+  const handleUndoTask = async (taskId: string) => {
     setCompletedTasks(prev => {
       const { [taskId]: _, ...rest } = prev;
       return rest;
     });
 
-    // Clear any existing interval and timeout
     if (taskTimeouts[`${taskId}-interval`]) {
       clearInterval(taskTimeouts[`${taskId}-interval`]);
     }
@@ -179,12 +219,21 @@ export default function Dashboard() {
       return rest;
     });
 
-    // Set the task back to uncompleted without changing its position in the list
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId ? { ...task, completed: false } : task
-      )
-    );
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed: false })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error updating task:', error)
+      setNotification('Error updating task. Please try again.')
+    } else {
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId ? { ...task, completed: false } : task
+        )
+      );
+    }
   };
 
   const handleSaveWorkflow = useCallback((newWorkflow: WorkflowStep[]) => {
@@ -206,17 +255,31 @@ export default function Dashboard() {
     console.log('New sermon data:', sermonData);
     
     // Create new tasks based on the current workflow
-    const newTasks: Task[] = workflowSteps.map((step, index) => ({
-      id: `${Date.now()}-${index + 1}`,
+    const newTasks: Database['public']['Tables']['tasks']['Insert'][] = workflowSteps.map((step, index) => ({
       title: `${step.title} for "${sermonData.title}"`,
       completed: false,
-      dueDate: new Date(sermonData.date.getTime() - (workflowSteps.length - index - 1) * 7 * 24 * 60 * 60 * 1000)
+      dueDate: new Date(sermonData.date.getTime() - (workflowSteps.length - index - 1) * 7 * 24 * 60 * 60 * 1000).toISOString(),
     }));
 
-    setTasks(prevTasks => [...prevTasks, ...newTasks]);
-    setShowAddSermonForm(false);
-    setNotification('Sermon added successfully!');
-    setTimeout(() => setNotification(''), 3000);
+    // Insert new tasks into Supabase
+    const insertTasks = async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert(newTasks)
+        .select()
+
+      if (error) {
+        console.error('Error adding tasks:', error)
+        setNotification('Error adding tasks. Please try again.')
+      } else if (data) {
+        setTasks(prevTasks => [...prevTasks, ...data])
+        setShowAddSermonForm(false)
+        setNotification('Sermon and tasks added successfully!')
+      }
+    }
+
+    insertTasks()
+    setTimeout(() => setNotification(''), 3000)
   };
 
   const getColorForProgress = (progress: number) => {
@@ -481,7 +544,7 @@ export default function Dashboard() {
                       {task.title}
                     </label>
                     <span className="text-sm text-gray-500">
-                      {task.dueDate.toLocaleDateString()}
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                     </span>
                   </div>
                 ))}
