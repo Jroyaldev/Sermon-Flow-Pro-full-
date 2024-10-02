@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 // Supabase Client
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -83,6 +84,16 @@ const ONBOARDING_TASKS: Task[] = [
     created_at: new Date().toISOString(),
   },
 ];
+
+// Update the LeftSidebar component props
+type LeftSidebarProps = {
+  router: AppRouterInstance;
+  user: {
+    fullName: string;
+    primaryEmailAddress: { emailAddress: string };
+  };
+  // Remove the onSignOut prop as we'll use a direct link instead
+};
 
 const Dashboard: React.FC = () => {
   const supabase = createClientComponentClient<Database>();
@@ -514,7 +525,6 @@ const Dashboard: React.FC = () => {
             imageUrl: user?.picture || '/default-avatar.png',
             primaryEmailAddress: { emailAddress: user?.email || '' }
           }}
-          onSignOut={handleSignOut}
         />
 
         {/* Center the main content */}
@@ -606,16 +616,6 @@ const Dashboard: React.FC = () => {
           onUpdate={handleUpdateSermon}
           onDelete={handleDeleteSermon}
         />
-      )}
-      {/* Dynamic User Button */}
-      {user && (
-        <button className="user-button">
-          <img 
-            src={user.picture || '/default-avatar.png'} 
-            alt="User avatar" 
-            className="user-avatar"
-          />
-        </button>
       )}
     </div>
   );
