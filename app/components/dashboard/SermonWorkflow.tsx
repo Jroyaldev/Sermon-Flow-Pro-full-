@@ -1,10 +1,9 @@
 // app/components/Dashboard/SermonWorkflow.tsx
 
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { Slider } from "@/components/ui/slider"; // Import the Slider component
-import { format, subDays } from 'date-fns'; // Updated imports
+import { Slider } from "@/components/ui/slider";
+import { format, subDays } from 'date-fns';
 
-// Update the WorkflowStep type
 export type WorkflowStep = {
   id: string;
   title: string;
@@ -13,7 +12,6 @@ export type WorkflowStep = {
   daysBeforeSermon: number;
 };
 
-// Define the props for the SermonWorkflow component
 interface SermonWorkflowProps {
   onClose: () => void;
   onSave: (steps: WorkflowStep[]) => void;
@@ -21,7 +19,6 @@ interface SermonWorkflowProps {
   currentSteps: WorkflowStep[];
 }
 
-// Define the ref type for the SermonWorkflow component
 export interface SermonWorkflowRef {
   save: () => void;
 }
@@ -30,44 +27,37 @@ const SermonWorkflow = forwardRef<SermonWorkflowRef, SermonWorkflowProps>(
   ({ onClose, onSave, initialSteps, currentSteps }, ref) => {
     const [steps, setSteps] = useState<WorkflowStep[]>(currentSteps || initialSteps);
 
-    // Function to add a new step
+    // Expose the save function to the parent component
+    useImperativeHandle(ref, () => ({
+      save: () => onSave(steps),
+    }));
+
     const addStep = (index: number) => {
       const newStep: WorkflowStep = {
         id: Date.now().toString(),
         title: 'New Step',
         description: 'Description for the new step',
         isSystemStep: false,
-        daysBeforeSermon: 7, // Default value
+        daysBeforeSermon: 7,
       };
       const newSteps = [...steps.slice(0, index + 1), newStep, ...steps.slice(index + 1)];
       setSteps(newSteps);
     };
 
-    // Function to update a step
     const updateStep = (index: number, updatedStep: Partial<WorkflowStep>) => {
-      const newSteps = steps.map((step, i) =>
-        i === index ? { ...step, ...updatedStep } : step
+      setSteps(prevSteps =>
+        prevSteps.map((step, i) => (i === index ? { ...step, ...updatedStep } : step))
       );
-      setSteps(newSteps);
     };
 
-    // Update the removeStep function to allow removal of system steps
     const removeStep = (index: number) => {
-      const newSteps = steps.filter((_, i) => i !== index);
-      setSteps(newSteps);
+      setSteps(prevSteps => prevSteps.filter((_, i) => i !== index));
     };
 
-    // Function to reset the workflow to the initial template
     const resetTemplate = () => {
       setSteps(initialSteps);
     };
 
-    // Expose the save function to the parent component
-    useImperativeHandle(ref, () => ({
-      save: () => onSave(steps),
-    }));
-
-    // Updated formatDueDate function
     const formatDueDate = (daysBeforeSermon: number) => {
       if (daysBeforeSermon === 0) {
         return "Sunday (Sermon day)";
@@ -75,9 +65,9 @@ const SermonWorkflow = forwardRef<SermonWorkflowRef, SermonWorkflowProps>(
         return "Saturday (day before)";
       } else {
         const weeksBefore = Math.floor(daysBeforeSermon / 7);
-        const dueDate = subDays(new Date(), daysBeforeSermon); // Use a dummy date for day of week
+        const dueDate = subDays(new Date(), daysBeforeSermon);
         const dayOfWeek = format(dueDate, 'EEEE');
-        
+
         if (weeksBefore === 0) {
           return `${dayOfWeek} (week of sermon)`;
         } else if (weeksBefore === 1) {
@@ -88,7 +78,6 @@ const SermonWorkflow = forwardRef<SermonWorkflowRef, SermonWorkflowProps>(
       }
     };
 
-    // Function to handle days before sermon change
     const handleDaysBeforeSermonChange = (stepId: string, value: number[]) => {
       setSteps(prevSteps =>
         prevSteps.map(step =>

@@ -12,15 +12,20 @@ import {
   LogOut
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
+// Remove Clerk imports
 
 interface LeftSidebarProps {
   router: ReturnType<typeof useRouter>;
+  user: {
+    fullName: string;
+    imageUrl: string;
+    primaryEmailAddress: { emailAddress: string };
+  };
+  onSignOut: () => void;
 }
 
-const LeftSidebar: React.FC<LeftSidebarProps> = ({ router }) => {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ router, user, onSignOut }) => {
+  // Remove Clerk hooks
 
   return (
     <div className="hidden md:flex flex-col w-72 bg-white border-r h-screen p-6">
@@ -98,17 +103,17 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ router }) => {
       {/* User section at the bottom */}
       <div className="mt-auto">
         <div className="flex items-center space-x-2 mb-2">
-          <img src={user?.imageUrl} alt="User" className="w-10 h-10 rounded-full" />
+          <img src={user.imageUrl} alt="User" className="w-10 h-10 rounded-full" />
           <div>
-            <p className="font-semibold">{user?.fullName}</p>
-            <p className="text-sm text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
+            <p className="font-semibold">{user.fullName}</p>
+            <p className="text-sm text-gray-500">{user.primaryEmailAddress.emailAddress}</p>
           </div>
         </div>
         <Button 
           variant="ghost" 
           className="w-full justify-start text-left text-black hover:bg-gray-100" 
           size="lg"
-          onClick={() => signOut()}
+          onClick={onSignOut}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Sign Out

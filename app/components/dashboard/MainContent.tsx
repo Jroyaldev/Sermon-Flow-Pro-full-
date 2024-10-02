@@ -8,9 +8,9 @@ import { Calendar, Activity, PlusCircle, BarChart2, Clock, Undo2, ChevronDown, C
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { cn } from "@/lib/utils";
-import SermonWorkflow, { WorkflowStep } from './SermonWorkflow'; // Import WorkflowStep type
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Input } from "@/components/ui/input";
+import SermonWorkflow, { WorkflowStep } from './SermonWorkflow'; // Import WorkflowStep type
 
 type Subtask = {
   id: string;
@@ -75,24 +75,26 @@ const MainContent: React.FC<MainContentProps> = ({
   handleUndoTask,
   handleAddSubtask,
 }) => {
+  // State hooks
   const [expandedTasks, setExpandedTasks] = useState<{ [key: string]: boolean }>({});
   const [newSubtaskTitles, setNewSubtaskTitles] = useState<{ [key: string]: string }>({});
 
-  const toggleTaskExpansion = (taskId: string) => {
+  // Event handlers using useCallback to prevent unnecessary re-renders
+  const toggleTaskExpansion = useCallback((taskId: string) => {
     setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
-  };
+  }, []);
 
-  const handleSubtaskTitleChange = (taskId: string, title: string) => {
+  const handleSubtaskTitleChange = useCallback((taskId: string, title: string) => {
     setNewSubtaskTitles(prev => ({ ...prev, [taskId]: title }));
-  };
+  }, []);
 
-  const handleSubtaskSubmit = (taskId: string) => {
+  const handleSubtaskSubmit = useCallback((taskId: string) => {
     const subtaskTitle = newSubtaskTitles[taskId];
     if (subtaskTitle && subtaskTitle.trim() !== '') {
       handleAddSubtask(taskId, subtaskTitle.trim());
       setNewSubtaskTitles(prev => ({ ...prev, [taskId]: '' }));
     }
-  };
+  }, [newSubtaskTitles, handleAddSubtask]);
 
   return (
     <div className={`p-4 md:p-10 space-y-6 w-full md:max-w-4xl mx-auto ${bgColor}`}>
@@ -160,94 +162,100 @@ const MainContent: React.FC<MainContentProps> = ({
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[300px]">
-              {tasks.map((task) => (
-                <div key={task.id} className="mb-4">
-                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
-                    <Checkbox
-                      id={task.id}
-                      checked={task.completed}
-                      onCheckedChange={() => handleToggleTask(task.id)}
-                      className="w-5 h-5"
-                    />
-                    {completedTasks[task.id] !== undefined && (
-                      <div className="w-8 h-8 relative">
-                        <CircularProgressbar 
-                          value={completedTasks[task.id] ?? 0} 
-                          strokeWidth={50}
-                          styles={buildStyles({
-                            pathColor: getColorForProgress(completedTasks[task.id] ?? 0),
-                            trailColor: 'transparent',
-                          })}
-                        />
-                        <button 
-                          className="absolute inset-0 flex items-center justify-center"
-                          onClick={() => handleUndoTask(task.id)}
-                        >
-                          <Undo2 className="h-3 w-3 text-blue-500" />
-                        </button>
+              {tasks.map((task) => {
+                // No hooks should be called inside this map function
+                const isTaskExpanded = expandedTasks[task.id];
+                const subtaskTitle = newSubtaskTitles[task.id] || '';
+
+                return (
+                  <div key={task.id} className="mb-4">
+                    <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
+                      <Checkbox
+                        id={task.id}
+                        checked={task.completed}
+                        onCheckedChange={() => handleToggleTask(task.id)}
+                        className="w-5 h-5"
+                      />
+                      {completedTasks[task.id] !== undefined && (
+                        <div className="w-8 h-8 relative">
+                          <CircularProgressbar
+                            value={completedTasks[task.id] ?? 0}
+                            strokeWidth={50}
+                            styles={buildStyles({
+                              pathColor: getColorForProgress(completedTasks[task.id] ?? 0),
+                              trailColor: 'transparent',
+                            })}
+                          />
+                          <button
+                            className="absolute inset-0 flex items-center justify-center"
+                            onClick={() => handleUndoTask(task.id)}
+                          >
+                            <Undo2 className="h-3 w-3 text-blue-500" />
+                          </button>
+                        </div>
+                      )}
+                      <label
+                        htmlFor={task.id}
+                        className={cn(
+                          "flex-grow cursor-pointer",
+                          task.completed ? "line-through text-gray-500" : "text-gray-700"
+                        )}
+                      >
+                        {task.title}
+                      </label>
+                      <span className="text-sm text-gray-500">
+                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleTaskExpansion(task.id)}
+                      >
+                        {isTaskExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                    </div>
+
+                    {isTaskExpanded && (
+                      <div className="ml-8 mt-2">
+                        {task.subtasks && task.subtasks.map((subtask: Subtask) => (
+                          <div key={subtask.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                            <Checkbox
+                              id={subtask.id}
+                              checked={subtask.completed}
+                              onCheckedChange={() => handleToggleTask(task.id, subtask.id)}
+                              className="w-4 h-4"
+                            />
+                            <label
+                              htmlFor={subtask.id}
+                              className={cn(
+                                "flex-grow cursor-pointer text-sm",
+                                subtask.completed ? "line-through text-gray-400" : "text-gray-600"
+                              )}
+                            >
+                              {subtask.title}
+                            </label>
+                          </div>
+                        ))}
+                        <div className="flex items-center space-x-2 p-2">
+                          <Input
+                            type="text"
+                            placeholder="New subtask"
+                            value={subtaskTitle}
+                            onChange={(e) => handleSubtaskTitleChange(task.id, e.target.value)}
+                            className="flex-grow"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubtaskSubmit(task.id)}
+                          >
+                            Add
+                          </Button>
+                        </div>
                       </div>
                     )}
-                    <label
-                      htmlFor={task.id}
-                      className={cn(
-                        "flex-grow cursor-pointer",
-                        task.completed ? "line-through text-gray-500" : "text-gray-700"
-                      )}
-                    >
-                      {task.title}
-                    </label>
-                    <span className="text-sm text-gray-500">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleTaskExpansion(task.id)}
-                    >
-                      {expandedTasks[task.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
                   </div>
-
-                  {expandedTasks[task.id] && (
-                    <div className="ml-8 mt-2">
-                      {task.subtasks && task.subtasks.map((subtask: Subtask) => (
-                        <div key={subtask.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                          <Checkbox
-                            id={subtask.id}
-                            checked={subtask.completed}
-                            onCheckedChange={() => handleToggleTask(task.id, subtask.id)}
-                            className="w-4 h-4"
-                          />
-                          <label
-                            htmlFor={subtask.id}
-                            className={cn(
-                              "flex-grow cursor-pointer text-sm",
-                              subtask.completed ? "line-through text-gray-400" : "text-gray-600"
-                            )}
-                          >
-                            {subtask.title}
-                          </label>
-                        </div>
-                      ))}
-                      <div className="flex items-center space-x-2 p-2">
-                        <Input
-                          type="text"
-                          placeholder="New subtask"
-                          value={newSubtaskTitles[task.id] || ''}
-                          onChange={(e) => handleSubtaskTitleChange(task.id, e.target.value)}
-                          className="flex-grow"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubtaskSubmit(task.id)}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -265,7 +273,7 @@ const MainContent: React.FC<MainContentProps> = ({
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span>{activity.description}</span>
                   <span className="text-sm text-gray-500 ml-auto">
-                    {activity.timestamp.toLocaleTimeString()}
+                    {new Date(activity.timestamp).toLocaleTimeString()}
                   </span>
                 </li>
               ))}

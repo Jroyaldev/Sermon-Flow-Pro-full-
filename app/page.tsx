@@ -5,7 +5,7 @@ import { BookOpen, Edit, Mic, Clock, Users, TrendingUp, FileText, ArrowRight } f
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <header className="container mx-auto px-4 lg:px-6 h-16 flex items-center">
         <Link className="flex items-center justify-center" href="#">
           <BookOpen className="h-6 w-6 mr-2" />
@@ -33,9 +33,20 @@ export default function Home() {
               <p className="mx-auto max-w-[800px] text-lg text-gray-600 md:text-xl dark:text-gray-300">
                 Join thousands of pastors who use sermon preparation tools to create impactful messages. Spend more time deepening your grasp of the text and with your family.
               </p>
-              <Button size="lg" asChild className="mt-4">
-                <Link href="/signup">Start Your Free 14 Day Trial</Link>
-              </Button>
+              <a
+                href="/api/auth/login"
+                className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
+              >
+                <h2 className={`mb-3 text-2xl font-semibold`}>
+                  Login{' '}
+                  <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                    -&gt;
+                  </span>
+                </h2>
+                <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
+                  Sign in to access your dashboard and start managing your sermons.
+                </p>
+              </a>
             </div>
           </div>
         </section>
@@ -207,6 +218,6 @@ export default function Home() {
           </Link>
         </nav>
       </footer>
-    </div>
+    </main>
   )
 }

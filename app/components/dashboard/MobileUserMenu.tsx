@@ -1,14 +1,17 @@
-import { useUser, useClerk } from '@clerk/nextjs';
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { LogOut, ChevronUp, ChevronDown } from 'lucide-react';
 
-const MobileUserMenu: React.FC = () => {
-  const { user, isSignedIn } = useUser();
-  const { signOut } = useClerk();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+interface MobileUserMenuProps {
+  user: {
+    fullName: string;
+    imageUrl: string;
+  };
+  onSignOut: () => void;
+}
 
-  if (!isSignedIn || !user) return null;
+const MobileUserMenu: React.FC<MobileUserMenuProps> = ({ user, onSignOut }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="relative">
@@ -29,7 +32,7 @@ const MobileUserMenu: React.FC = () => {
             variant="ghost"
             className="w-full justify-start text-left text-black hover:bg-gray-100" 
             size="lg"
-            onClick={() => signOut()}
+            onClick={onSignOut}
           >
             <LogOut className="mr-2 h-5 w-5" />
             Sign Out

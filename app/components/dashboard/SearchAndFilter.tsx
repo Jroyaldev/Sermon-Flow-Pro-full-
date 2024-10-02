@@ -1,3 +1,5 @@
+// app/components/Dashboard/SearchAndFilter.tsx
+
 import React from 'react';
 
 interface SearchAndFilterProps {
@@ -11,7 +13,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   searchTerm,
   setSearchTerm,
   filterCompleted,
-  setFilterCompleted
+  setFilterCompleted,
 }) => {
   return (
     <div className="mb-4">
@@ -24,7 +26,9 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       />
       <select
         value={filterCompleted === null ? '' : filterCompleted.toString()}
-        onChange={(e) => setFilterCompleted(e.target.value === '' ? null : e.target.value === 'true')}
+        onChange={(e) =>
+          setFilterCompleted(e.target.value === '' ? null : e.target.value === 'true')
+        }
         className="p-2 border rounded"
       >
         <option value="">All</option>
