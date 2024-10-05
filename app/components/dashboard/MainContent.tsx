@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import SermonWorkflow, { WorkflowStep } from './SermonWorkflow'; // Import WorkflowStep type
 import { useState } from 'react';
 import { Input } from "@/components/ui/input";
+import React from 'react';
 
 type Subtask = {
   id: string;
@@ -18,28 +19,31 @@ type Subtask = {
   completed: boolean;
 };
 
+// Update the Task type to include a possible 'content' field
 type Task = {
   id: string;
   title: string;
+  content?: string; // Add this line
   completed: boolean;
+  created_at: string;
   dueDate?: string;
   subtasks?: Subtask[];
 };
 
 interface MainContentProps {
-  bgColor: string;
   currentDate: string;
+  tasks: Task[];
+  completedTasks: { [key: string]: number | undefined };
+  showAddTaskPopup: boolean;
+  setShowAddTaskPopup: React.Dispatch<React.SetStateAction<boolean>>;
+  handleAddTask: (title: string) => Promise<void>;
+  handleToggleTask: (taskId: string) => void;
+  handleDeleteTask: (taskId: string) => Promise<void>; // Add this line
+  handleEditTask: (taskId: string, newTitle: string) => void;
+  bgColor: string;
   showConfigureWorkflow: boolean;
   setShowConfigureWorkflow: (value: boolean) => void;
-  handleAddTask: (newTask: any) => void;
-  tasks: Task[];
-  handleToggleTask: (taskId: string, subtaskId?: string) => void;
-  completedTasks: { [key: string]: number | undefined };
   getColorForProgress: (progress: number) => string;
-  showAddTaskPopup: boolean;
-  setShowAddTaskPopup: (value: boolean) => void;
-  notification: string;
-  setNotification: (value: string) => void;
   showAddSermonForm: boolean;
   setShowAddSermonForm: (value: boolean) => void;
   handleAddSermon: (sermonData: any) => void;
@@ -52,19 +56,19 @@ interface MainContentProps {
 }
 
 const MainContent: React.FC<MainContentProps> = ({
-  bgColor,
   currentDate,
-  showConfigureWorkflow,
-  setShowConfigureWorkflow,
-  handleAddTask,
   tasks,
-  handleToggleTask,
   completedTasks,
-  getColorForProgress,
   showAddTaskPopup,
   setShowAddTaskPopup,
-  notification,
-  setNotification,
+  handleAddTask,
+  handleToggleTask,
+  handleDeleteTask, // Add this line
+  handleEditTask,
+  bgColor,
+  showConfigureWorkflow,
+  setShowConfigureWorkflow,
+  getColorForProgress,
   showAddSermonForm,
   setShowAddSermonForm,
   handleAddSermon,
@@ -75,6 +79,8 @@ const MainContent: React.FC<MainContentProps> = ({
   handleUndoTask,
   handleAddSubtask,
 }) => {
+  console.log('Tasks received in MainContent:', JSON.stringify(tasks, null, 2));
+
   const [expandedTasks, setExpandedTasks] = useState<{ [key: string]: boolean }>({});
   const [newSubtaskTitles, setNewSubtaskTitles] = useState<{ [key: string]: string }>({});
 
@@ -92,6 +98,27 @@ const MainContent: React.FC<MainContentProps> = ({
       handleAddSubtask(taskId, subtaskTitle.trim());
       setNewSubtaskTitles(prev => ({ ...prev, [taskId]: '' }));
     }
+  };
+
+  const formatDueDate = (dueDate: string | undefined) => {
+    if (!dueDate) return '';
+    const date = new Date(dueDate);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  const getTaskDisplay = (task: Task | string) => {
+    console.log('Task being displayed:', JSON.stringify(task, null, 2));
+    if (typeof task === 'string') {
+      try {
+        const parsedTask = JSON.parse(task);
+        return parsedTask.title || 'Untitled Task';
+      } catch (e) {
+        console.error('Error parsing task:', e);
+        return task;
+      }
+    }
+    return task.title || 'Untitled Task';
   };
 
   return (
@@ -161,61 +188,58 @@ const MainContent: React.FC<MainContentProps> = ({
           <CardContent>
             <ScrollArea className="h-[300px]">
               {tasks.map((task) => (
-                <div key={task.id} className="mb-4">
+                <div key={typeof task === 'string' ? JSON.parse(task).id : task.id} className="mb-4">
                   <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
                     <Checkbox
-                      id={task.id}
-                      checked={task.completed}
-                      onCheckedChange={() => handleToggleTask(task.id)}
+                      id={typeof task === 'string' ? JSON.parse(task).id : task.id}
+                      checked={typeof task === 'string' ? JSON.parse(task).completed : task.completed}
+                      onCheckedChange={() => handleToggleTask(typeof task === 'string' ? JSON.parse(task).id : task.id)}
                       className="w-5 h-5"
                     />
-                    {completedTasks[task.id] !== undefined && (
+                    {completedTasks[typeof task === 'string' ? JSON.parse(task).id : task.id] !== undefined && (
                       <div className="w-8 h-8 relative">
                         <CircularProgressbar 
-                          value={completedTasks[task.id] ?? 0} 
+                          value={completedTasks[typeof task === 'string' ? JSON.parse(task).id : task.id] ?? 0} 
                           strokeWidth={50}
                           styles={buildStyles({
-                            pathColor: getColorForProgress(completedTasks[task.id] ?? 0),
+                            pathColor: getColorForProgress(completedTasks[typeof task === 'string' ? JSON.parse(task).id : task.id] ?? 0),
                             trailColor: 'transparent',
                           })}
                         />
                         <button 
                           className="absolute inset-0 flex items-center justify-center"
-                          onClick={() => handleUndoTask(task.id)}
+                          onClick={() => handleUndoTask(typeof task === 'string' ? JSON.parse(task).id : task.id)}
                         >
                           <Undo2 className="h-3 w-3 text-blue-500" />
                         </button>
                       </div>
                     )}
                     <label
-                      htmlFor={task.id}
+                      htmlFor={typeof task === 'string' ? JSON.parse(task).id : task.id}
                       className={cn(
                         "flex-grow cursor-pointer",
-                        task.completed ? "line-through text-gray-500" : "text-gray-700"
+                        (typeof task === 'string' ? JSON.parse(task).completed : task.completed) ? "line-through text-gray-500" : "text-gray-700"
                       )}
                     >
-                      {task.title}
+                      {getTaskDisplay(task)}
                     </label>
-                    <span className="text-sm text-gray-500">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleTaskExpansion(task.id)}
+                      onClick={() => toggleTaskExpansion(typeof task === 'string' ? JSON.parse(task).id : task.id)}
                     >
-                      {expandedTasks[task.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {expandedTasks[typeof task === 'string' ? JSON.parse(task).id : task.id] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </div>
 
-                  {expandedTasks[task.id] && (
+                  {expandedTasks[typeof task === 'string' ? JSON.parse(task).id : task.id] && (
                     <div className="ml-8 mt-2">
                       {task.subtasks && task.subtasks.map((subtask: Subtask) => (
                         <div key={subtask.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                           <Checkbox
                             id={subtask.id}
                             checked={subtask.completed}
-                            onCheckedChange={() => handleToggleTask(task.id, subtask.id)}
+                            onCheckedChange={() => handleToggleTask(task.id)} // Remove subtask.id
                             className="w-4 h-4"
                           />
                           <label
@@ -233,13 +257,13 @@ const MainContent: React.FC<MainContentProps> = ({
                         <Input
                           type="text"
                           placeholder="New subtask"
-                          value={newSubtaskTitles[task.id] || ''}
-                          onChange={(e) => handleSubtaskTitleChange(task.id, e.target.value)}
+                          value={newSubtaskTitles[typeof task === 'string' ? JSON.parse(task).id : task.id] || ''}
+                          onChange={(e) => handleSubtaskTitleChange(typeof task === 'string' ? JSON.parse(task).id : task.id, e.target.value)}
                           className="flex-grow"
                         />
                         <Button
                           size="sm"
-                          onClick={() => handleSubtaskSubmit(task.id)}
+                          onClick={() => handleSubtaskSubmit(typeof task === 'string' ? JSON.parse(task).id : task.id)}
                         >
                           Add
                         </Button>

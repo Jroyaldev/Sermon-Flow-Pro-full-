@@ -3,53 +3,62 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: Json }
+  | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string
+          email: string
+          full_name: string | null
+          avatar_url: string | null
+          church_name: string | null
+          role: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          full_name?: string | null
+          avatar_url?: string | null
+          church_name?: string | null
+          role?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          church_name?: string | null
+          role?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       tasks: {
         Row: {
           id: string
           title: string
           completed: boolean
-          created_at?: string
-          dueDate?: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          completed?: boolean
-          created_at?: string
-          dueDate?: string
-        }
-        Update: {
-          id?: string
-          title?: string
-          completed?: boolean
-          created_at?: string
-          dueDate?: string
-        }
-      }
-      sermons: {
-        Row: {
-          id: string
-          title: string
           created_at: string
-          // Add any other fields your sermons table has
         }
         Insert: {
           id?: string
           title: string
+          completed?: boolean
           created_at?: string
-          // Add any other fields your sermons table has
         }
         Update: {
           id?: string
           title?: string
+          completed?: boolean
           created_at?: string
-          // Add any other fields your sermons table has
         }
       }
       subtasks: {
@@ -59,8 +68,44 @@ export interface Database {
           title: string
           completed: boolean
         }
-        Insert: Omit<Database['public']['Tables']['subtasks']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['subtasks']['Row']>
+        Insert: {
+          id?: string
+          task_id: string
+          title: string
+          completed?: boolean
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          title?: string
+          completed?: boolean
+        }
+      }
+      sermons: {
+        Row: {
+          id: string
+          title: string
+          date: string
+          scripture: string
+          notes: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          date: string
+          scripture: string
+          notes: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          date?: string
+          scripture?: string
+          notes?: string
+          created_at?: string
+        }
       }
     }
     Views: {
@@ -70,6 +115,9 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }

@@ -1,4 +1,6 @@
-// app/components/Dashboard/LeftSidebar.tsx
+// app/components/dashboard/LeftSidebar.tsx
+
+'use client';
 
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,22 +14,45 @@ import {
   LogOut
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
+
+// Supabase Client
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
 
 interface LeftSidebarProps {
   router: ReturnType<typeof useRouter>;
+  onLogout: () => void;
 }
 
-const LeftSidebar: React.FC<LeftSidebarProps> = ({ router }) => {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ router, onLogout }) => {
+  const supabase = createClientComponentClient<Database>();
+
+  /**
+   * Handles the sign-out process using Supabase.
+   * After signing out, it triggers the onLogout callback.
+   */
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      // Optionally, display a notification to the user
+    } else {
+      onLogout();
+    }
+  };
 
   return (
     <div className="hidden md:flex flex-col w-72 bg-white border-r h-screen p-6">
+      {/* Navigation Section */}
       <div className="flex-grow">
         <nav className="space-y-2">
           {/* Dashboard Button */}
-          <Button variant="ghost" className="w-full justify-start text-left text-black hover:bg-gray-100" size="lg">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-left text-black hover:bg-gray-100" 
+            size="lg"
+            onClick={() => router.push('/dashboard')}
+          >
             <LayoutDashboard className="mr-2 h-5 w-5" />
             Dashboard
             <ChevronRight className="ml-auto h-5 w-5" />
@@ -95,20 +120,21 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ router }) => {
         </nav>
       </div>
 
-      {/* User section at the bottom */}
-      <div className="mt-auto">
-        <div className="flex items-center space-x-2 mb-2">
-          <img src={user?.imageUrl} alt="User" className="w-10 h-10 rounded-full" />
-          <div>
-            <p className="font-semibold">{user?.fullName}</p>
-            <p className="text-sm text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
+      {/* Custom Data Section (Placeholder for Future Use) */}
+      {/* You can add custom components or data here later */}
+      {/* Example:
+          <div className="my-custom-section">
+            <CustomComponent />
           </div>
-        </div>
+      */}
+
+      {/* Sign Out Button */}
+      <div className="mt-auto">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-left text-black hover:bg-gray-100" 
           size="lg"
-          onClick={() => signOut()}
+          onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Sign Out

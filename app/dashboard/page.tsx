@@ -1,12 +1,17 @@
-// app/dashboard/page.tsx
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import Dashboard from "@/app/components/dashboard/Dashboard";
 
-import React from 'react';
-import dynamic from 'next/dynamic';
+export default async function DashboardPage() {
+  const supabase = createClient();
 
-const Dashboard = dynamic(() => import('../components/dashboard/Dashboard'), { ssr: false });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-const DashboardPage: React.FC = () => {
+  if (!user) {
+    return redirect("/login");
+  }
+
   return <Dashboard />;
-};
-
-export default DashboardPage;
+}

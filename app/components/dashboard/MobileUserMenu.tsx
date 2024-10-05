@@ -1,40 +1,59 @@
-import { useUser, useClerk } from '@clerk/nextjs';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, ChevronUp, ChevronDown } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useAuth } from '@/hooks/useAuth';
 
 const MobileUserMenu: React.FC = () => {
-  const { user, isSignedIn } = useUser();
-  const { signOut } = useClerk();
+  const { user } = useAuth();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const supabase = createClientComponentClient();
 
-  if (!isSignedIn || !user) return null;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <div className="relative">
-      <button 
+      <Button
+        variant="ghost"
+        className="relative h-8 w-8 rounded-full"
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="flex items-center justify-between w-full p-2 rounded-lg bg-gray-100"
       >
-        <div className="flex items-center space-x-2">
-          <img src={user.imageUrl} alt="User" className="w-8 h-8 rounded-full" />
-          <span className="font-semibold">{user.fullName}</span>
-        </div>
-        {isMenuOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-      </button>
-      
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ''} />
+          <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+      </Button>
       {isMenuOpen && (
-        <div className="mt-2 w-full bg-white shadow-lg rounded-lg p-2">
-          <Button 
-            variant="ghost"
-            className="w-full justify-start text-left text-black hover:bg-gray-100" 
-            size="lg"
-            onClick={() => signOut()}
-          >
-            <LogOut className="mr-2 h-5 w-5" />
-            Sign Out
-          </Button>
-          {/* Add more menu items as needed */}
+        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+          <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+            <a
+              href="#"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              role="menuitem"
+              onClick={(e) => {
+                e.preventDefault();
+                router.push('/profile');
+              }}
+            >
+              Profile
+            </a>
+            <a
+              href="#"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              role="menuitem"
+              onClick={(e) => {
+                e.preventDefault();
+                handleSignOut();
+              }}
+            >
+              Sign out
+            </a>
+          </div>
         </div>
       )}
     </div>

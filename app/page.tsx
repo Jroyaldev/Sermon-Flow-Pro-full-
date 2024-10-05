@@ -5,7 +5,7 @@ import { BookOpen, Edit, Mic, Clock, Users, TrendingUp, FileText, ArrowRight } f
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <header className="container mx-auto px-4 lg:px-6 h-16 flex items-center">
         <Link className="flex items-center justify-center" href="#">
           <BookOpen className="h-6 w-6 mr-2" />
@@ -33,9 +33,20 @@ export default function Home() {
               <p className="mx-auto max-w-[800px] text-lg text-gray-600 md:text-xl dark:text-gray-300">
                 Join thousands of pastors who use sermon preparation tools to create impactful messages. Spend more time deepening your grasp of the text and with your family.
               </p>
-              <Button size="lg" asChild className="mt-4">
-                <Link href="/signup">Start Your Free 14 Day Trial</Link>
-              </Button>
+              <Link
+                href="/login"
+                className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
+              >
+                <h2 className={`mb-3 text-2xl font-semibold`}>
+                  Login{' '}
+                  <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                    -&gt;
+                  </span>
+                </h2>
+                <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
+                  Sign in to access your dashboard and start managing your sermons.
+                </p>
+              </Link>
             </div>
           </div>
         </section>
@@ -100,7 +111,7 @@ export default function Home() {
             </div>
             <div className="text-center mt-12">
               <Button asChild>
-                <Link href="/signup" className="inline-flex items-center">
+                <Link href="/login" className="inline-flex items-center">
                   Experience These Features <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -137,7 +148,7 @@ export default function Home() {
             </div>
             <div className="text-center mt-12">
               <Button variant="outline" asChild>
-                <Link href="/signup">Start Your Journey to Better Sermons</Link>
+                <Link href="/login">Start Your Journey to Better Sermons</Link>
               </Button>
             </div>
           </div>
@@ -190,7 +201,7 @@ export default function Home() {
             <div className="text-center mt-12">
               <p className="text-lg mb-4">Not sure which plan is right for you?</p>
               <Button asChild>
-                <Link href="/signup">Try It Free for 14 Days</Link>
+                <Link href="/login">Try It Free for 14 Days</Link>
               </Button>
             </div>
           </div>
@@ -207,6 +218,6 @@ export default function Home() {
           </Link>
         </nav>
       </footer>
-    </div>
+    </main>
   )
 }
